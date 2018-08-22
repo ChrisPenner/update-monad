@@ -8,30 +8,31 @@ module FreeUpdate where
 
 import Control.Monad.Reader
 import Control.Monad.State
+import Data.Foldable
 import Data.Monoid
 
 class Absorb s p where
   act :: s -> p -> s
 
 data FreeUpdateT s p m a = FreeUpdateT
-  { runFreeUpdateT :: (s -> [p] -> s) -> s -> m ([p], a)
+  { runFreeUpdateT :: (s -> p -> s) -> s -> m ([p], a)
   } deriving (Functor)
 
 instance (Monad m) => Applicative (FreeUpdateT s p m) where
   pure a = FreeUpdateT $ \_ _ -> pure (mempty, a)
   FreeUpdateT u <*> FreeUpdateT t =
     FreeUpdateT $ \next s -> do
-      (p, f) <- u next s
-      (p', a) <- t next (next s p)
-      return (p ++ p', f a)
+      (ps, f) <- u next s
+      (ps', a) <- t next (foldl' next s ps)
+      return (ps <> ps', f a)
 
 instance (Monad m) => Monad (FreeUpdateT s p m) where
   FreeUpdateT u >>= f =
     FreeUpdateT $ \next s -> do
-      (p, a) <- u next s
+      (ps, a) <- u next s
       let FreeUpdateT fs = f a
-      (p', b) <- fs next (next s p)
-      return (p <> p', b)
+      (ps', b) <- fs next (foldl' next s ps)
+      return (ps <> ps', b)
 
 instance Absorb Int (Sum Int) where
   act s (Sum i) = s + i
@@ -49,18 +50,18 @@ instance (Monad m) => MonadState s (FreeUpdateT s (Last s) m) where
   get = currentState
   put s = action (pure $ Last (Just s))
 
-evalUpdateT :: (Functor m) => FreeUpdateT s p m a -> (s -> [p] -> s) -> s -> m a
+evalUpdateT :: (Functor m) => FreeUpdateT s p m a -> (s -> p -> s) -> s -> m a
 evalUpdateT u next s = snd <$> runUpdateT u next s
 
-execUpdateT :: (Monad m) => FreeUpdateT s p m a -> (s -> [p] -> s) -> s -> m s
+execUpdateT :: (Monad m) => FreeUpdateT s p m a -> (s -> p -> s) -> s -> m s
 execUpdateT u next s = snd <$> runUpdateT (u *> currentState) next s
 
 collectUpdateT ::
-     (Functor m) => FreeUpdateT s p m a -> (s -> [p] -> s) -> s -> m [p]
+     (Functor m) => FreeUpdateT s p m a -> (s -> p -> s) -> s -> m [p]
 collectUpdateT u next s = fst <$> runUpdateT u next s
 
 runUpdateT ::
-     (Functor m) => FreeUpdateT s p m a -> (s -> [p] -> s) -> s -> m ([p], a)
+     (Functor m) => FreeUpdateT s p m a -> (s -> p -> s) -> s -> m ([p], a)
 runUpdateT (FreeUpdateT u) = u
 
 addLength :: FreeUpdateT s String IO ()
@@ -74,10 +75,10 @@ prog = do
 
 runProgFake :: FreeUpdateT [String] String IO () -> IO ()
 runProgFake u = do
-  collection <- collectUpdateT u (++) []
+  collection <- collectUpdateT u (flip (:)) []
   print collection
 
 runProgReal :: FreeUpdateT Int String IO () -> IO ()
 runProgReal u = do
-  cnt <- execUpdateT u (\i s -> i + (getSum . foldMap (Sum . length) $ s)) 0
+  cnt <- execUpdateT u (\i s -> i + (length $ s)) 0
   print cnt
