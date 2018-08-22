@@ -26,5 +26,24 @@ loop = do
   c <- liftIO $ getChar <* putStrLn ""
   case c of
     'q' -> pure ()
-    'k' -> (action . pure $ Inc) >> loop
-    _ -> (action . pure $ Dec) >> loop
+    'k' -> action Inc >> loop
+    _ -> action Dec >> loop
+
+addLength :: FreeUpdateT s String IO ()
+addLength = liftIO getLine >>= action
+
+prog :: FreeUpdateT s String IO ()
+prog = do
+  addLength
+  addLength
+  addLength
+
+runProgFake :: FreeUpdateT [String] String IO () -> IO ()
+runProgFake u = do
+  collection <- collectUpdateT u (flip (:)) []
+  print collection
+
+runProgReal :: FreeUpdateT Int String IO () -> IO ()
+runProgReal u = do
+  cnt <- execUpdateT u (\i s -> i + (length $ s)) 0
+  print cnt

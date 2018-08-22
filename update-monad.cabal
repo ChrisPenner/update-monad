@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 525f529b5eeb9dbe52b23326d80af6f205bb8dea671296c1f399aa07c290f84a
+-- hash: 9e9f02b43af2ad62f676a6e9a52a3d596eeec8ce7599d591d875c5938163d92c
 
 name:           update-monad
 version:        0.1.0.0
@@ -28,6 +28,7 @@ library
   exposed-modules:
       FreeUpdate
       Update
+      UpdateState
   other-modules:
       Paths_update_monad
   hs-source-dirs:
