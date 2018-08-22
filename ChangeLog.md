@@ -1,3 +1,3 @@
-# Changelog for lifting-invariance
+# Changelog for update-monad
 
 ## Unreleased changes
