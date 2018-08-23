@@ -9,24 +9,21 @@ import Control.Monad.State
 import Data.Maybe
 import Data.Monoid
 
-instance (Monad m) => MonadState s (FreeUpdateT s (Last s) m) where
-  get = currentState
-  put s = action (Last (Just s))
+type UStateT s m a = FreeUpdateT s s m a
 
-type UStateT s m a = FreeUpdateT s (Last s) m a
+instance (Monad m) => MonadState s (FreeUpdateT s s m) where
+  get = currentState
+  put s = action s
 
 uRunStateT :: (Monad m) => UStateT s m a -> s -> m (s, a)
 uRunStateT m s = do
   evalUpdateT (addState m) next s
   where
-    next s p = fromMaybe s $ getLast p
+    next _ p = p
     addState u = do
       a <- u
       s <- currentState
       return (s, a)
-
-execUpdateT :: (Monad m) => FreeUpdateT s p m a -> (s -> p -> s) -> s -> m s
-execUpdateT u next s = snd <$> runUpdateT (u *> currentState) next s
 
 testState :: UStateT Int IO ()
 testState = do
