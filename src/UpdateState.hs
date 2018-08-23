@@ -11,7 +11,7 @@ import Data.Monoid
 
 instance (Monad m) => MonadState s (FreeUpdateT s (Last s) m) where
   get = currentState
-  put s = action (pure $ Last (Just s))
+  put s = action (Last (Just s))
 
 type UStateT s m a = FreeUpdateT s (Last s) m a
 

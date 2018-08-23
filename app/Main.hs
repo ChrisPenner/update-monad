@@ -7,6 +7,10 @@ import FreeUpdate
 main :: IO ()
 main = execUpdateT loop stepGame (GameState 0) >>= print
 
+testGame :: GameState
+testGame =
+  execUpdate (traverse action [Inc, Inc, Dec, Inc]) stepGame (GameState 0)
+
 stepGame :: GameState -> Event -> GameState
 stepGame (GameState i) Inc = GameState (i + 1)
 stepGame (GameState i) Dec = GameState (i - 1)
