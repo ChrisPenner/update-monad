@@ -31,10 +31,10 @@ loop = do
                 else Withdraw (abs amt)
         liftIO (print evt)
         action [evt]
-        currentState >>= liftIO . print
+        getState >>= liftIO . print
     loop
 
-instance Absorb BankBalance [Event] where
+instance ApplyAction BankBalance [Event] where
   act balance events =
     balance & (appEndo . foldMap (Endo . processTransaction) $ events)
 

@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 64cb69cecf8454368c0384697a593bdf04a1e85d971c7dfe87b7821b512c634f
+-- hash: 80ada5ba2dcfd9d08ea6b29875fef1fe542a73dadd3e3de24d21ed4f09f12611
 
 name:           update-monad
 version:        0.1.0.0
@@ -27,7 +27,7 @@ source-repository head
 library
   exposed-modules:
       FreeUpdate
-      Game
+      State
       Update
       UpdateState
   other-modules:
