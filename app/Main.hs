@@ -15,7 +15,8 @@ main :: IO ()
 main = auditUpdateT loop (BankBalance 0) >>= print
 
 testGame :: BankBalance
-testGame = act (BankBalance 0) [Deposit 30, Deposit 30, Withdraw 50, Deposit 10]
+testGame =
+  applyAction [Deposit 30, Deposit 30, Withdraw 50, Deposit 10] (BankBalance 0)
 
 loop :: UpdateT BankBalance [Event] IO ()
 loop = do
@@ -30,12 +31,12 @@ loop = do
                 then Deposit amt
                 else Withdraw (abs amt)
         liftIO (print evt)
-        action [evt]
+        putAction [evt]
         getState >>= liftIO . print
     loop
 
-instance ApplyAction BankBalance [Event] where
-  act balance events =
+instance ApplyAction [Event] BankBalance where
+  applyAction events balance =
     balance & (appEndo . foldMap (Endo . processTransaction) $ events)
 
 processTransaction :: Event -> BankBalance -> BankBalance
