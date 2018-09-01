@@ -1,53 +1,52 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 module Main where
 
 import Control.Monad
 import Control.Monad.IO.Class
-import FreeUpdate
+import Data.Char
+import Data.Function ((&))
+import Data.Monoid
+import Text.Read
+import Update
 
 main :: IO ()
-main = execUpdateT loop stepGame (GameState 0) >>= print
+main = auditUpdateT loop (BankBalance 0) >>= print
 
-testGame :: GameState
-testGame =
-  execUpdate (traverse action [Inc, Inc, Dec, Inc]) stepGame (GameState 0)
+testGame :: BankBalance
+testGame = act (BankBalance 0) [Deposit 30, Deposit 30, Withdraw 50, Deposit 10]
 
-stepGame :: GameState -> Event -> GameState
-stepGame (GameState i) Inc = GameState (i + 1)
-stepGame (GameState i) Dec = GameState (i - 1)
+loop :: UpdateT BankBalance [Event] IO ()
+loop = do
+  ln <- liftIO getLine
+  unless (filter (not . isSpace) ln == "q") $ do
+    let mAmt = readMaybe ln
+    case mAmt of
+      Nothing -> liftIO (print "please enter a number")
+      Just amt -> do
+        let evt =
+              if amt > 0
+                then Deposit amt
+                else Withdraw (abs amt)
+        liftIO (print evt)
+        action [evt]
+        currentState >>= liftIO . print
+    loop
 
-newtype GameState =
-  GameState Int
+instance Absorb BankBalance [Event] where
+  act balance events =
+    balance & (appEndo . foldMap (Endo . processTransaction) $ events)
+
+processTransaction :: Event -> BankBalance -> BankBalance
+processTransaction (Deposit n) (BankBalance i) = BankBalance (i + n)
+processTransaction (Withdraw n) (BankBalance i) = BankBalance (i - n)
+
+newtype BankBalance =
+  BankBalance Int
   deriving (Eq, Ord, Show)
 
 data Event
-  = Inc
-  | Dec
-
-loop :: FreeUpdateT GameState Event IO ()
-loop = do
-  GameState n <- currentState
-  liftIO $ print n
-  c <- liftIO $ getChar <* putStrLn ""
-  case c of
-    'q' -> pure ()
-    'k' -> action Inc >> loop
-    _ -> action Dec >> loop
-
-addLength :: FreeUpdateT s String IO ()
-addLength = liftIO getLine >>= action
-
-prog :: FreeUpdateT s String IO ()
-prog = do
-  addLength
-  addLength
-  addLength
-
-runProgFake :: FreeUpdateT [String] String IO () -> IO ()
-runProgFake u = do
-  collection <- collectUpdateT u (flip (:)) []
-  print collection
-
-runProgReal :: FreeUpdateT Int String IO () -> IO ()
-runProgReal u = do
-  cnt <- execUpdateT u (\i s -> i + (length $ s)) 0
-  print cnt
+  = Deposit Int
+  | Withdraw Int
+  deriving (Eq, Ord, Show)

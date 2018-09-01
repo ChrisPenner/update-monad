@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9e9f02b43af2ad62f676a6e9a52a3d596eeec8ce7599d591d875c5938163d92c
+-- hash: 64cb69cecf8454368c0384697a593bdf04a1e85d971c7dfe87b7821b512c634f
 
 name:           update-monad
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 library
   exposed-modules:
       FreeUpdate
+      Game
       Update
       UpdateState
   other-modules:
@@ -36,6 +37,7 @@ library
   build-depends:
       base >=4.7 && <5
     , mtl
+    , vector
   default-language: Haskell2010
 
 executable update-monad-exe
@@ -49,6 +51,7 @@ executable update-monad-exe
       base >=4.7 && <5
     , mtl
     , update-monad
+    , vector
   default-language: Haskell2010
 
 test-suite update-monad-test
@@ -63,4 +66,5 @@ test-suite update-monad-test
       base >=4.7 && <5
     , mtl
     , update-monad
+    , vector
   default-language: Haskell2010
