@@ -9,7 +9,7 @@ import Data.Char
 import Data.Function ((&))
 import Data.Monoid
 import Text.Read
-import Update
+import UpdateT
 
 main :: IO ()
 main = auditUpdateT loop (BankBalance 0) >>= print
