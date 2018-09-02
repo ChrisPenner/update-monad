@@ -12,25 +12,26 @@ import Control.Monad.State
 import Data.Functor.Identity
 import Data.Monoid
 
-class ApplyAction p s where
+class (Monoid p) =>
+      ApplyAction p s
+  where
   applyAction :: p -> s -> s
 
 class (ApplyAction p s, Monad m) =>
-      MonadUpdate m s p
+      MonadUpdate m p s
   | m -> s
   , m -> p
   where
   putAction :: p -> m ()
   getState :: m s
 
-type Update s p a = UpdateT s p Identity a
+type Update p s a = UpdateT p s Identity a
 
-data UpdateT s p m a = UpdateT
+data UpdateT p s m a = UpdateT
   { runUpdateT :: (s -> m (p, a))
   } deriving (Functor)
 
-instance (ApplyAction p s, Monad m, Monoid p) =>
-         Applicative (UpdateT s p m) where
+instance (ApplyAction p s, Monad m) => Applicative (UpdateT p s m) where
   pure a = UpdateT . const $ pure (mempty, a)
   UpdateT u <*> UpdateT t =
     UpdateT $ \s -> do
@@ -38,7 +39,7 @@ instance (ApplyAction p s, Monad m, Monoid p) =>
       (p', a) <- t (applyAction p s)
       return (p' <> p, f a)
 
-instance (ApplyAction p s, Monad m, Monoid p) => Monad (UpdateT s p m) where
+instance (ApplyAction p s, Monad m) => Monad (UpdateT p s m) where
   UpdateT u >>= f =
     UpdateT $ \s -> do
       (p, a) <- u s
@@ -46,51 +47,46 @@ instance (ApplyAction p s, Monad m, Monoid p) => Monad (UpdateT s p m) where
       (p', a) <- fs (applyAction p s)
       return (p <> p', a)
 
-instance (Monad m, ApplyAction p s, Monoid p) =>
-         MonadUpdate (UpdateT s p m) s p where
+instance (Monad m, ApplyAction p s) => MonadUpdate (UpdateT p s m) p s where
   putAction p = UpdateT $ \_ -> pure (p, ())
   getState = UpdateT $ \s -> pure (mempty, s)
 
 instance ApplyAction (Endo s) s where
   applyAction (Endo f) = f
 
--- getState :: (Monoid p, Applicative m) => UpdateT s p m s
-instance (Monad m) => MonadState s (UpdateT s (Endo s) m) where
+instance (Monad m) => MonadState s (UpdateT (Endo s) s m) where
   get = UpdateT $ \s -> pure (mempty, s)
   put s = UpdateT $ \_ -> pure (Endo $ const s, ())
 
-instance (MonadIO m, Monoid p, ApplyAction p s) => MonadIO (UpdateT s p m) where
+instance (MonadIO m, ApplyAction p s) => MonadIO (UpdateT p s m) where
   liftIO m = UpdateT $ \_ -> liftIO m >>= \x -> return (mempty, x)
 
-evalUpdateT ::
-     (Monoid p, ApplyAction p s, Monad m) => UpdateT s p m a -> s -> m a
+evalUpdateT :: (ApplyAction p s, Monad m) => UpdateT p s m a -> s -> m a
 evalUpdateT u s = snd <$> runUpdateT u s
 
-execUpdateT ::
-     (Monoid p, ApplyAction p s, Monad m) => UpdateT s p m a -> s -> m s
+execUpdateT :: (ApplyAction p s, Monad m) => UpdateT p s m a -> s -> m s
 execUpdateT u s = snd <$> runUpdateT (u *> getState) s
 
-collectUpdateT ::
-     (Monoid p, ApplyAction p s, Monad m) => UpdateT s p m a -> s -> m p
+collectUpdateT :: (ApplyAction p s, Monad m) => UpdateT p s m a -> s -> m p
 collectUpdateT u s = fst <$> runUpdateT u s
 
 auditUpdateT ::
-     (Monad m, Monoid p, ApplyAction p s) => UpdateT s p m a -> s -> m (s, p, a)
+     (Monad m, ApplyAction p s) => UpdateT p s m a -> s -> m (s, p, a)
 auditUpdateT u s = do
   (p, (a, s)) <- runUpdateT ((,) <$> u <*> getState) s
   return (s, p, a)
 
-evalUpdate :: (Monoid p, ApplyAction p s) => Update s p a -> s -> a
+evalUpdate :: (ApplyAction p s) => Update p s a -> s -> a
 evalUpdate u s = snd $ runUpdate u s
 
-execUpdate :: (Monoid p, ApplyAction p s) => Update s p a -> s -> s
+execUpdate :: (ApplyAction p s) => Update p s a -> s -> s
 execUpdate u s = snd $ runUpdate (u *> getState) s
 
-collectUpdate :: (Monoid p, ApplyAction p s) => Update s p a -> s -> p
+collectUpdate :: (ApplyAction p s) => Update p s a -> s -> p
 collectUpdate u s = fst $ runUpdate u s
 
-runUpdate :: (Monoid p, ApplyAction p s) => Update s p a -> s -> (p, a)
+runUpdate :: (ApplyAction p s) => Update p s a -> s -> (p, a)
 runUpdate u s = runIdentity $ runUpdateT u s
 
-auditUpdate :: (Monoid p, ApplyAction p s) => Update s p a -> s -> (s, p, a)
+auditUpdate :: (ApplyAction p s) => Update p s a -> s -> (s, p, a)
 auditUpdate u s = runIdentity $ auditUpdateT u s
