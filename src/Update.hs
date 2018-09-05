@@ -11,6 +11,7 @@ module Update where
 import Control.Monad.State
 import Data.Functor.Identity
 import Data.Monoid
+import Data.Void
 
 class (Monoid p) =>
       ApplyAction p s
@@ -81,3 +82,7 @@ auditUpdate :: (ApplyAction p s) => Update p s a -> s -> (s, p, a)
 auditUpdate u s =
   let (p, (a, s)) = runUpdate ((,) <$> u <*> getState) s
    in (s, p, a)
+
+instance ApplyAction p s => MonadUpdate (State (p, s)) p s where
+  putAction p' = modify (\(p, s) -> (p <> p', applyAction p' s))
+  getState = snd <$> get
