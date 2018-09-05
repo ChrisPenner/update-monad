@@ -12,4 +12,6 @@ is run (rather than using a typeclass); this conveniently allows you to
 substitute out the `act` function for testing or alternate behaviour without
 needing to rewrite or transform the monadic values themselves. Nifty!
 
-Check out `src/app/Main.hs` to see a few small examples of me testing stuff out.
+Yes; I know I could implement `Update` in terms of `UpdateT Identity`; but implementing
+them separately is clearer for people learning how it works.
+
