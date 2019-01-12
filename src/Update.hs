@@ -72,6 +72,6 @@ collectUpdate :: (ApplyAction p s) => Update p s a -> s -> p
 collectUpdate u s = fst $ runUpdate u s
 
 auditUpdate :: (ApplyAction p s) => Update p s a -> s -> (s, p, a)
-auditUpdate u s =
-  let (p, (a, s)) = runUpdate ((,) <$> u <*> getState) s
-   in (s, p, a)
+auditUpdate u s = 
+  let (p, (a, s')) = runUpdate ((,) <$> u <*> getState) s
+  in (s', p, a)
